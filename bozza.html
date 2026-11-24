@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECHO Mappa – eventi d'arte a Firenze e in Toscana</title>
+<meta name="description" content="Gli eventi d'arte della settimana di ECHO – florence art agenda, sulla mappa.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Permanent+Marker&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--violet:#6b3fa3;--cream:#fff9dc;--ink:#2a1c3d;--soft:#5b4d70;--line:#e8dfc0;
+--yellow:#ffd60a;--green:#19b36b;--red:#ff3b30;--grey:#b9b6c2}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.45 Quicksand,system-ui,sans-serif}
+header{padding:18px max(4vw,16px) 10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px}
+h1{font:400 clamp(34px,6vw,54px)/1 Shrikhand,Georgia,serif;color:var(--violet);margin:0}
+header p{margin:0;font-weight:600;color:var(--soft)}
+.wrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;padding:8px max(4vw,16px) 24px;max-width:1400px}
+.mapbox{align-self:start;border:5px solid #141414;box-shadow:8px 8px 0 #141414;border-radius:20px;overflow:hidden;background:#fff;position:relative}
+#map{height:min(72vh,680px);min-height:380px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;font-size:14px;font-weight:600;border-top:2px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.d{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid var(--ink)}
+.y{background:var(--yellow)}.g{background:var(--green)}.r{background:var(--red)}.p{background:var(--grey)}
+.views{position:absolute;top:10px;right:10px;z-index:500;display:flex;gap:6px}
+.views button{font:700 14px Quicksand,sans-serif;background:#fff;color:var(--violet);border:2px solid var(--violet);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer}
+.views button.on{background:var(--violet);color:#fff}
+.fuori{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:500;font:700 15px Quicksand,sans-serif;background:var(--violet);color:#fff;border:0;border-radius:999px;padding:10px 18px;min-height:44px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);white-space:nowrap}
+.fuori[hidden]{display:none}
+aside h2{font:400 26px/1.1 Shrikhand,Georgia,serif;color:var(--violet);margin:6px 0 2px}
+.day{font-weight:700;color:var(--soft);margin:14px 0 6px;text-transform:capitalize}
+.ev{all:unset;box-sizing:border-box;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;width:100%;background:#fff;border:2px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+.ev:focus-visible{outline:3px solid var(--violet);outline-offset:2px}
+.ev.sel{border-color:var(--violet)}
+.ev .d{margin-top:3px}
+.ev b{display:block}
+.ev small{display:block;color:var(--soft);font-size:14px}
+.st{font-size:13px;font-weight:700;margin-top:3px}
+.st.r{color:var(--red);background:none}.st.g{color:var(--green);background:none}.st.y,.st.p{color:var(--soft);background:none}
+.ev.past{opacity:.6}
+.ev a{color:var(--violet);font-weight:700;font-size:14px}
+.foot{font-size:14px;color:var(--soft);margin-top:10px}
+.foot a{color:var(--violet);font-weight:700}
+/* marker */
+.leaflet-container{background:#1e6bff}
+.mini{position:absolute;top:10px;z-index:1100;width:calc(50% - 15px);height:min(64%,360px);background:#fffdf5;border:4px solid #141414;border-radius:14px;box-shadow:5px 5px 0 #141414;overflow:hidden}
+.mini[hidden]{display:none}
+#mini{background:#e9e6dc}
+#pIG{left:10px}#pOSM{right:10px}
+.mini .x{position:absolute;top:5px;right:5px;z-index:900;width:34px;height:34px;border-radius:50%;border:3px solid #141414;background:#ffd60a;font:700 20px/1 Quicksand,sans-serif;cursor:pointer}
+.igwrap,#mini{position:absolute;inset:0 0 36px 0;overflow:hidden}
+.igwrap iframe{width:326px;border:0;transform-origin:0 0;display:block}
+.apri{position:absolute;left:0;right:0;bottom:0;height:36px;display:flex;align-items:center;justify-content:center;background:#141414;color:#fffdf5;font:700 14px Quicksand,sans-serif;text-decoration:none}
+.ln{display:inline-block;width:26px;height:8px;border-radius:4px;border:2px solid #141414}
+#giorni{text-transform:capitalize}
+.fermata{font:700 13px Quicksand,sans-serif;color:#141414;background:#fffdf5;border:2px solid #141414;border-radius:8px;padding:1px 7px;box-shadow:none;white-space:nowrap}
+.fermata::before{display:none}
+.nolab .fermata{display:none}
+.mk{position:relative;width:34px;height:34px}
+.mk i{position:absolute;inset:0;border-radius:50%;border:4px solid #141414;box-shadow:0 0 0 4px #fffdf5,0 0 0 7px #141414}
+.mk.s-p i{width:22px;height:22px;inset:6px}
+.mk .pulse{position:absolute;inset:0;border-radius:50%;animation:pulse 1.2s ease-out infinite}
+.mk.blink i{animation:blink 1s steps(2,jump-none) infinite}
+@keyframes pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+@keyframes blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.mk .pulse,.mk.blink i{animation:none}}
+.leaflet-popup-content{font:15px/1.4 Quicksand,sans-serif;color:var(--ink)}
+.leaflet-popup-content b{font-size:16px}
+@media(max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}#map{height:58vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>ECHO Mappa</h1>
+  <p id="sub">Gli eventi d'arte della settimana</p>
+</header>
+<div class="wrap">
+  <section class="mapbox">
+    <div class="views"><button id="vFi" class="on" type="button">Centro</button><button id="vTo" type="button">Toscana</button></div>
+    <div style="position:relative"><button id="fuori" class="fuori" type="button" hidden></button>
+    <div id="pIG" class="mini" hidden><button class="x" type="button" aria-label="Chiudi">×</button><div class="igwrap"><iframe title="Post Instagram di ECHO" loading="lazy"></iframe></div><a class="apri" id="igLink" target="_blank" rel="noopener">Apri su Instagram →</a></div>
+    <div id="pOSM" class="mini" hidden><button class="x" type="button" aria-label="Chiudi">×</button><div id="mini"></div><a class="apri" id="goLink" target="_blank" rel="noopener">Portami lì →</a></div>
+    <div id="map" role="region" aria-label="Mappa degli eventi"></div></div>
+    <div class="legend" id="giorni"></div>
+    <div class="legend">
+      <span><i class="d y"></i>Questa settimana</span>
+      <span><i class="d g"></i>Oggi</span>
+      <span><i class="d r"></i>In corso adesso</span>
+      <span><i class="d p"></i>Già passato</span>
+    </div>
+  </section>
+  <aside>
+    <h2 id="week">Settimana</h2>
+    <div id="list"></div>
+    <p class="foot">A cura di <a href="https://www.instagram.com/echo_agenda/" target="_blank" rel="noopener">ECHO – florence art agenda</a>. Organizzi un evento? Scrivici in DM. <a id="post" href="https://www.instagram.com/echo_agenda/" target="_blank" rel="noopener">Vedi il post della settimana</a></p>
+  </aside>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+{
+const DURATA_STD = 180; // minuti di "in corso" quando il post non dà l'ora di fine
+const FIRENZE = [[43.7548,11.2362],[43.7856,11.2712]];
+const FIRENZE_SVG = [[43.747,11.196],[43.792,11.312]];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const q = new URLSearchParams(location.search);
+const adesso = () => q.get('simula') ? new Date(q.get('simula')) : new Date();
+const toDate = (d, hm) => { const [h,m] = (hm||'00:00').split(':').map(Number); const x = new Date(d+'T00:00:00'); x.setHours(h,m,0,0); return x; };
+const sameDay = (a,b) => a.toDateString() === b.toDateString();
+const hm = d => d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+
+function stato(e, now){
+  const day = new Date(e.data+'T00:00:00');
+  if (e.inizio){
+    const a = toDate(e.data, e.inizio);
+    const b = e.fine ? toDate(e.data, e.fine) : new Date(a.getTime()+DURATA_STD*60000);
+    if (now >= a && now < b) return {k:'r', txt:'In corso adesso'+(e.fine?' fino alle '+e.fine:'')};
+    if (now >= b) return {k:'p', txt:'Già passato'};
+    if (sameDay(day, now)) return {k:'g', txt:'Oggi alle '+e.inizio};
+    return {k:'y', txt:'Ore '+e.inizio+(e.fine?'–'+e.fine:'')};
+  }
+  const fineGiorno = new Date(day.getTime()+86400000);
+  if (sameDay(day, now)) return {k:'g', txt:'Oggi'};
+  if (now >= fineGiorno) return {k:'p', txt:'Già passato'};
+  return {k:'y', txt:'Tutto il giorno'};
+}
+
+const TOSCANA = [[42.25,9.6],[44.55,12.45]];
+const map = L.map('map', {scrollWheelZoom:false, minZoom:7, maxZoom:17, maxBounds:TOSCANA, maxBoundsViscosity:0.8, zoomSnap:0.25}).fitBounds(FIRENZE);
+map.attributionControl.setPrefix('Mappa illustrata ECHO');
+map.createPane('base').style.zIndex = 300;
+const linee = L.layerGroup().addTo(map);
+const COL_G = ['#ff3b30','#ff8a1f','#19b36b','#00a8c6','#7a3fd1','#ff7ac0','#1e6bff']; // dom..sab
+const KX = Math.cos(43.77*Math.PI/180);
+function otto(a, b, diagPrima){ // spezzata a 45/90 gradi tra due luoghi
+  const dx = (b.lon-a.lon)*KX, dy = b.lat-a.lat, m = Math.min(Math.abs(dx), Math.abs(dy)), sx = Math.sign(dx), sy = Math.sign(dy);
+  const mid = diagPrima ? [a.lat+sy*m, a.lon+sx*m/KX] : (Math.abs(dx) > Math.abs(dy) ? [a.lat, b.lon-sx*m/KX] : [b.lat-sy*m, a.lon]);
+  return [[a.lat,a.lon], mid, [b.lat,b.lon]];
+}
+const etichette = () => document.getElementById('map').classList.toggle('nolab', map.getZoom() < 12.5);
+map.on('zoomend', () => { etichette(); if (dati) render(); });
+const svgLayer = (url, bounds) => fetch(url).then(r => r.text()).then(t => { const el = new DOMParser().parseFromString(t, 'image/svg+xml').documentElement; el.setAttribute('preserveAspectRatio','none'); return L.svgOverlay(el, bounds, {interactive:false, pane:'base'}); });
+svgLayer('toscana.svg', TOSCANA).then(l => { l.addTo(map); l.bringToBack(); return svgLayer('firenze.svg', FIRENZE_SVG); }).then(l => l.addTo(map));
+const col = {y:'var(--yellow)', g:'var(--green)', r:'var(--red)', p:'var(--grey)'};
+let dati = null, markers = [], sel = null;
+
+function icon(k){
+  const anim = k==='g'||k==='r';
+  return L.divIcon({className:'', iconSize:[34,34], iconAnchor:[17,17],
+    html:'<div class="mk s-'+k+(anim?' blink':'')+'">'+(anim?'<span class="pulse" style="background:'+col[k]+'"></span>':'')+'<i style="background:'+col[k]+'"></i></div>'});
+}
+function gmaps(e){ return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.luogo+', '+e.citta); }
+
+function render(){
+  const now = adesso();
+  markers.forEach(m => m.remove()); markers = [];
+  const ev = dati.eventi.map((e,i) => ({...e, i, s: stato(e, now)}));
+  // un pallino per luogo: vince lo stato più "caldo"
+  const rank = {r:0,g:1,y:2,p:3}, perLuogo = {};
+  ev.forEach(e => { const key = e.lat+','+e.lon; if (!perLuogo[key] || rank[e.s.k] < rank[perLuogo[key].s.k]) perLuogo[key] = e; });
+  Object.values(perLuogo).sort((a,b)=>rank[b.s.k]-rank[a.s.k]).forEach(e => {
+    const m = L.marker([e.lat,e.lon], {icon: icon(e.s.k), title: e.luogo, zIndexOffset: (3-rank[e.s.k])*100}).addTo(map)
+      .bindPopup('<b>'+esc(e.luogo)+'</b><br>'+esc(e.citta)+'<br>'+esc(e.titolo)+'<br><span style="font-weight:700">'+esc(e.s.txt)+'</span><br><a href="'+gmaps(e)+'" target="_blank" rel="noopener">Portami lì →</a>');
+    m.bindTooltip(esc(e.luogo), {permanent:true, direction:'right', offset:[16,0], className:'fermata'});
+    m.on('click', () => { sel = e.i; highlight(); apri(e); });
+    markers.push(m);
+  });
+  const giorni = {};
+  ev.forEach(e => (giorni[e.data] ??= []).push(e));
+  // una linea per ogni giorno: collega i luoghi in ordine di orario
+  linee.clearLayers();
+  const chips = [];
+  Object.keys(giorni).sort().forEach(d => {
+    const g = new Date(d+'T00:00:00'), c = COL_G[g.getDay()], oggi = sameDay(g, now);
+    chips.push('<span><i class="ln" style="background:'+c+'"></i>'+g.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})+'</span>');
+    const vicino = map.getZoom() >= 12.5, dentro = L.latLngBounds(FIRENZE_SVG);
+    const tappe = []; [...giorni[d]].filter(e => !vicino || dentro.contains([e.lat,e.lon])).sort((a,b) => (a.inizio||'99').localeCompare(b.inizio||'99')).forEach(e => { if (!tappe.some(t => t.lat===e.lat && t.lon===e.lon)) tappe.push(e); });
+    let pts = [];
+    for (let i = 0; i < tappe.length-1; i++) pts = pts.concat(otto(tappe[i], tappe[i+1], i % 2 === 0));
+    if (pts.length) { L.polyline(pts, {color:'#141414', weight: oggi ? 15 : 11, lineJoin:'round', interactive:false}).addTo(linee); L.polyline(pts, {color:c, weight: oggi ? 9 : 6, lineJoin:'round', interactive:false}).addTo(linee); }
+  });
+  document.getElementById('giorni').innerHTML = chips.join('');
+  etichette();
+  document.getElementById('list').innerHTML = Object.keys(giorni).sort().map(d =>
+    '<div class="day">'+new Date(d+'T00:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})+'</div>'+
+    giorni[d].map(e => '<button class="ev'+(e.s.k==='p'?' past':'')+'" data-i="'+e.i+'" type="button"><i class="d '+e.s.k+'"></i><span><b>'+esc(e.titolo)+'</b><small>'+esc(e.luogo)+' · '+esc(e.citta)+'</small><small>'+esc(e.tipo)+(e.persone?' · '+esc(e.persone):'')+'</small><span class="st '+e.s.k+'">'+esc(e.s.txt)+'</span></span></button>').join('')
+  ).join('');
+  highlight();
+}
+let miniMap = null, miniPin = null;
+function apri(e){ // due mini schermate: il post Instagram e la mappa vera ingrandita
+  setTimeout(() => map.closePopup(), 0);
+  const ig = document.getElementById('pIG'), os = document.getElementById('pOSM'); ig.hidden = os.hidden = false;
+  const id = (dati.post.match(/\/p\/([^\/]+)/) || [])[1];
+  const fr = ig.querySelector('iframe'), wrap = ig.querySelector('.igwrap'), s = wrap.clientWidth/326;
+  fr.style.transform = 'scale('+s+')'; fr.style.height = (wrap.clientHeight/s)+'px';
+  const src = 'https://www.instagram.com/p/'+id+'/embed/'; if (fr.src !== src) fr.src = src;
+  document.getElementById('igLink').href = 'https://www.instagram.com/p/'+id+'/?img_index='+(e.slide || 1);
+  document.getElementById('goLink').href = gmaps(e);
+  if (!miniMap){ miniMap = L.map('mini', {zoomControl:false}); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(miniMap); miniMap.attributionControl.setPrefix(''); }
+  miniMap.invalidateSize(); miniMap.setView([e.lat, e.lon], 17);
+  if (miniPin) miniPin.remove();
+  miniPin = L.circleMarker([e.lat, e.lon], {radius:11, color:'#141414', weight:4, fillColor:'#ff3b30', fillOpacity:1}).addTo(miniMap).bindTooltip(esc(e.luogo), {permanent:true, direction:'top', offset:[0,-10], className:'fermata'});
+}
+function chiudi(){ document.getElementById('pIG').hidden = document.getElementById('pOSM').hidden = true; }
+document.querySelectorAll('.mini .x').forEach(b => b.onclick = chiudi);
+map.on('click', chiudi);
+function highlight(){ document.querySelectorAll('.ev').forEach(b => b.classList.toggle('sel', Number(b.dataset.i)===sel)); }
+
+document.getElementById('list').addEventListener('click', ev => {
+  const b = ev.target.closest('.ev'); if (!b) return;
+  const e = dati.eventi[Number(b.dataset.i)]; sel = Number(b.dataset.i); highlight();
+  map.setView([e.lat,e.lon], Math.max(map.getZoom(), 15));
+  const m = markers.find(m => { const p = m.getLatLng(); return p.lat===e.lat && p.lng===e.lon; });
+  apri(e);
+  if (window.innerWidth < 860) document.getElementById('map').scrollIntoView({behavior:'smooth'});
+});
+const vFi = document.getElementById('vFi'), vTo = document.getElementById('vTo'), fuori = document.getElementById('fuori');
+const nFuori = () => dati ? dati.eventi.filter(e => !L.latLngBounds(FIRENZE).contains([e.lat,e.lon])).length : 0;
+function badge(show){ const n = nFuori(); fuori.hidden = !show || n === 0; fuori.textContent = '+' + n + (n === 1 ? ' evento' : ' eventi') + ' fuori dal centro →'; }
+vFi.onclick = () => { map.fitBounds(FIRENZE); vFi.classList.add('on'); vTo.classList.remove('on'); badge(true); };
+vTo.onclick = () => { map.fitBounds(L.latLngBounds(dati.eventi.map(e=>[e.lat,e.lon])).pad(0.15)); vTo.classList.add('on'); vFi.classList.remove('on'); badge(false); };
+fuori.onclick = () => vTo.onclick();
+
+fetch('eventi-bozza.json?'+Date.now()).then(r => r.json()).then(d => {
+  dati = d;
+  document.getElementById('week').textContent = 'Settimana '+d.settimana;
+  if (d.post) document.getElementById('post').href = d.post;
+  render(); badge(true); setInterval(render, 60000);
+}).catch(() => { document.getElementById('list').textContent = 'Eventi non disponibili in questo momento.'; });
+}
+</script>
+</body>
+</html>
