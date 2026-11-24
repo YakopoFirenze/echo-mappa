@@ -231,31 +231,36 @@ vFi.onclick = () => { map.fitBounds(FIRENZE); vFi.classList.add('on'); vTo.class
 vTo.onclick = () => { map.fitBounds(L.latLngBounds(dati.eventi.map(e=>[e.lat,e.lon])).pad(0.15)); vTo.classList.add('on'); vFi.classList.remove('on'); badge(false); };
 fuori.onclick = () => vTo.onclick();
 
-// --- musica generata dal vivo nel browser (nessun file audio): stesso giro di accordi e motivo "E-CHO" con eco ---
+// --- musica generata dal vivo nel browser (nessun file audio): versione sognante, carillon che dondola, tappeti morbidi ed eco ---
 const Mu = {ctx:null, on:false, next:0, bar:0, timer:null};
-const BPMM = 106, BT = 60/BPMM, hzN = n => 440*Math.pow(2,(n-69)/12);
+const BPMM = 84, BT = 60/BPMM, hzN = n => 440*Math.pow(2,(n-69)/12);
 const PROGM = [[45,[64,68,71,73]],[49,[64,68,71,73]],[50,[66,69,73,76]],[52,[66,68,71,73]],[54,[64,68,69,73]],[50,[64,69,73,78]],[47,[62,66,69,73]],[52,[62,64,68,71]]];
 function muInit(){
   const c = Mu.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  Mu.out = c.createGain(); Mu.out.gain.value = 0.55; Mu.out.connect(c.destination);
+  Mu.out = c.createGain(); Mu.out.gain.value = 0.6; Mu.out.connect(c.destination);
+  // riverbero: una coda di rumore che sfuma, per dare aria
+  const len = c.sampleRate*3, buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){ const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 2.6); }
+  const rev = c.createConvolver(); rev.buffer = buf; const rg = c.createGain(); rg.gain.value = 0.5; rev.connect(rg); rg.connect(Mu.out);
+  Mu.bus = c.createGain(); Mu.bus.connect(Mu.out); Mu.bus.connect(rev);
   Mu.echo = c.createGain(); // eco che rimbalza sinistra/destra
   const dl = c.createDelay(2), dr = c.createDelay(2), fb = c.createGain(), pl = c.createStereoPanner(), pr = c.createStereoPanner(), lp = c.createBiquadFilter();
-  dl.delayTime.value = BT*1.5; dr.delayTime.value = BT*1.5; fb.gain.value = 0.55; pl.pan.value = -0.8; pr.pan.value = 0.8; lp.frequency.value = 2600;
-  Mu.echo.connect(Mu.out); Mu.echo.connect(dl); dl.connect(pr); pr.connect(Mu.out); dl.connect(lp); lp.connect(dr); dr.connect(pl); pl.connect(Mu.out); dr.connect(fb); fb.connect(dl);
+  dl.delayTime.value = BT*1.5; dr.delayTime.value = BT*1.5; fb.gain.value = 0.6; pl.pan.value = -0.8; pr.pan.value = 0.8; lp.frequency.value = 2200;
+  Mu.echo.connect(Mu.bus); Mu.echo.connect(dl); dl.connect(pr); pr.connect(Mu.bus); dl.connect(lp); lp.connect(dr); dr.connect(pl); pl.connect(Mu.bus); dr.connect(fb); fb.connect(dl);
 }
-function nota(f, t, d, tipo, vol, dest, cut){
-  const c = Mu.ctx, o = c.createOscillator(), g = c.createGain(); o.type = tipo; o.frequency.value = f;
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.012); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
-  let n = o; if (cut){ const fl = c.createBiquadFilter(); fl.frequency.value = cut; o.connect(fl); n = fl; }
-  n.connect(g); g.connect(dest || Mu.out); o.start(t); o.stop(t+d+0.05);
+function nota(f, t, d, vol, dest, att){
+  const c = Mu.ctx, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+(att || 0.008)); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
+  o.connect(g); g.connect(dest || Mu.bus); o.start(t); o.stop(t+d+0.05);
 }
-function motivo(t){ [[0,76,0.7],[0.75,73,0.7],[1.5,81,1.6]].forEach(m => nota(hzN(m[1]), t+m[0]*BT, m[2]*BT, 'triangle', 0.22, Mu.echo)); }
+const carillon = (n, t, vol, dest) => { nota(hzN(n), t, 2.2, vol, dest); nota(hzN(n)*4, t, 0.25, vol*0.25, dest); };
+function motivo(t){ [[0,76,1.2],[0.75,73,1.2],[1.5,81,2.4]].forEach(m => carillon(m[1]+12, t+m[0]*BT, 0.16, Mu.echo)); }
 function battuta(b, t){
   const [root, ch] = PROGM[b % 8];
-  for (let k = 0; k < 8; k++) nota(hzN(k % 2 ? root : root-12), t+k*BT/2, BT*0.45, 'sawtooth', k % 2 ? 0.10 : 0.16, null, 420);
-  [0,1.5,3].forEach(x => ch.forEach(n => nota(hzN(n-12), t+x*BT, BT*1.3, 'sine', 0.05)));
-  const seq = [ch[0],ch[1],ch[2],ch[3],ch[2],ch[1],ch[3],ch[2]];
-  for (let k = 0; k < 16; k++) nota(hzN(seq[k % 8]+12), t+k*BT/4, BT*0.22, 'square', k % 4 ? 0.012 : 0.022, null, 2400);
+  ch.forEach(n => nota(hzN(n-12), t, BT*4.6, 0.045, null, 1.0));           // tappeto
+  nota(hzN(root-12), t, BT*3.8, 0.16, null, 0.05);                          // basso morbido
+  const alt = [ch[0],ch[2],ch[1],ch[3],ch[0]+12,ch[3],ch[1]+12,ch[2]];      // note che dondolano
+  alt.forEach((n, k) => carillon(n, t+k*BT/2, k % 2 ? 0.05 : 0.075, k % 4 === 0 ? Mu.echo : null));
   if (b % 4 === 2) motivo(t);
 }
 function muTick(){ while (Mu.next < Mu.ctx.currentTime + 0.6){ battuta(Mu.bar++, Mu.next); Mu.next += 4*BT; } }
@@ -263,7 +268,7 @@ const btnMu = document.getElementById('musica');
 btnMu.onclick = () => {
   if (!Mu.ctx) muInit();
   Mu.on = !Mu.on; btnMu.classList.toggle('on', Mu.on); btnMu.textContent = Mu.on ? '♪ Musica: sì' : '♪ Musica';
-  if (Mu.on){ Mu.ctx.resume(); Mu.out.gain.value = 0.55; Mu.next = Mu.ctx.currentTime + 0.1; Mu.bar = 0; muTick(); Mu.timer = setInterval(muTick, 200); }
+  if (Mu.on){ Mu.ctx.resume(); Mu.out.gain.value = 0.6; Mu.next = Mu.ctx.currentTime + 0.1; Mu.bar = 0; muTick(); Mu.timer = setInterval(muTick, 200); }
   else { clearInterval(Mu.timer); Mu.out.gain.value = 0; }
 };
 const suonoTocco = () => { if (Mu.on) motivo(Mu.ctx.currentTime + 0.03); };
