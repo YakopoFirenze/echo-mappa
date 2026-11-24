@@ -1,0 +1,27 @@
+{
+  "settimana": "23.11 – 29.11",
+  "post": "https://www.instagram.com/echo_agenda/p/DgH0WfaDgYS/",
+  "eventi": [
+    {"luogo": "Museo Stefano Bardini", "citta": "Firenze", "lat": 43.7652, "lon": 11.2591,
+     "titolo": "Mal giudicar puossi’: i volumi di pietre di Leone Strozzi", "persone": "Silvia Davoli e Adriano Aymonino x Brevissime",
+     "tipo": "Incontro", "data": "2026-11-26", "inizio": "18:45", "fine": "19:30"},
+    {"luogo": "Galleria Schema Polis", "citta": "Carmignano (PO)", "lat": 43.8097, "lon": 11.0137,
+     "titolo": "Ungelöst", "persone": "Raffaele Di Vaia, a cura di Erica Romano",
+     "tipo": "Finissage", "data": "2026-11-26", "inizio": "18:30"},
+    {"luogo": "Magazzini Generali", "citta": "Livorno", "lat": 43.5560, "lon": 10.3070,
+     "titolo": "Seminarios – pratiche artistiche in contesti liminali", "persone": "Workshop di Fabrizio Basso",
+     "tipo": "Workshop", "data": "2026-11-26", "inizio": "15:30", "fine": "19:30"},
+    {"luogo": "Magazzini Generali", "citta": "Livorno", "lat": 43.5560, "lon": 10.3070,
+     "titolo": "Seminarios – pratiche artistiche in contesti liminali", "persone": "Workshop di Fabrizio Basso",
+     "tipo": "Workshop", "data": "2026-11-27", "inizio": "09:00", "fine": "11:30"},
+    {"luogo": "Accademia di Belle Arti di Firenze", "citta": "Firenze", "lat": 43.7766, "lon": 11.2589,
+     "titolo": "Il popolo delle donne", "persone": "Incontro con Yuri Ancarani e Marina Valcarenghi e proiezione del film, x Of Boxes and Ceilings",
+     "tipo": "Incontro", "data": "2026-11-27", "inizio": "15:00"},
+    {"luogo": "Villa Romana", "citta": "Firenze", "lat": 43.7556, "lon": 11.2422,
+     "titolo": "Pigeon Prophecies", "persone": "Gülbin Ünlü, Tjaarke Maas e Wietske Maas",
+     "tipo": "Evento", "data": "2026-11-27", "inizio": "18:30"},
+    {"luogo": "Palazzo delle Papesse", "citta": "Siena", "lat": 43.3178, "lon": 11.3306,
+     "titolo": "What we carry with us", "persone": "Subodh Gupta, prodotto da Opera Laboratori con Galleria Continua",
+     "tipo": "Mostra (27 nov – 3 mag)", "data": "2026-11-27"}
+  ]
+}
