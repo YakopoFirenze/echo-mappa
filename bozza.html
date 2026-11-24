@@ -238,44 +238,93 @@ vFi.onclick = () => { map.fitBounds(FIRENZE); vFi.classList.add('on'); vTo.class
 vTo.onclick = () => { map.fitBounds(L.latLngBounds(dati.eventi.map(e=>[e.lat,e.lon])).pad(0.15)); vTo.classList.add('on'); vFi.classList.remove('on'); badge(false); };
 fuori.onclick = () => vTo.onclick();
 
-// --- musica generata dal vivo nel browser (nessun file audio): versione sognante, carillon che dondola, tappeti morbidi ed eco ---
+// --- musica generata dal vivo nel browser (nessun file audio): groove "garage" morbido, piano elettrico, basso rotondo e il motivo ECHO lanciato nell'eco ---
 const Mu = {ctx:null, on:false, next:0, bar:0, timer:null};
-const BPMM = 84, BT = 60/BPMM, hzN = n => 440*Math.pow(2,(n-69)/12);
-const PROGM = [[45,[64,68,71,73]],[49,[64,68,71,73]],[50,[66,69,73,76]],[52,[66,68,71,73]],[54,[64,68,69,73]],[50,[64,69,73,78]],[47,[62,66,69,73]],[52,[62,64,68,71]]];
+const BPMM = 110, BT = 60/BPMM, S16 = BT/4, hzN = n => 440*Math.pow(2,(n-69)/12);
+const CHM = [[57,61,64,68],[54,57,61,64],[57,61,62,66],[59,62,66,69]], RTM = [42,38,35,40];
 function muInit(){
   const c = Mu.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  Mu.out = c.createGain(); Mu.out.gain.value = 0.6; Mu.out.connect(c.destination);
+  Mu.out = c.createGain(); Mu.out.gain.value = 1.15;
+  const cmp = c.createDynamicsCompressor(); cmp.threshold.value = -10; cmp.ratio.value = 4; Mu.out.connect(cmp); cmp.connect(c.destination);
   // riverbero: una coda di rumore che sfuma, per dare aria
-  const len = c.sampleRate*3, buf = c.createBuffer(2, len, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++){ const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 2.6); }
-  const rev = c.createConvolver(); rev.buffer = buf; const rg = c.createGain(); rg.gain.value = 0.5; rev.connect(rg); rg.connect(Mu.out);
-  Mu.bus = c.createGain(); Mu.bus.connect(Mu.out); Mu.bus.connect(rev);
+  const len = Math.floor(c.sampleRate*2.6), buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){ const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 3); }
+  const rev = c.createConvolver(); rev.buffer = buf; const rg = c.createGain(); rg.gain.value = 0.22; rev.connect(rg); rg.connect(Mu.out);
+  Mu.bus = c.createGain(); Mu.bus.connect(Mu.out);                 // secco
+  Mu.riv = c.createGain(); Mu.riv.connect(Mu.out); Mu.riv.connect(rev); // con riverbero
   Mu.echo = c.createGain(); // eco che rimbalza sinistra/destra
   const dl = c.createDelay(2), dr = c.createDelay(2), fb = c.createGain(), pl = c.createStereoPanner(), pr = c.createStereoPanner(), lp = c.createBiquadFilter();
-  dl.delayTime.value = BT*1.5; dr.delayTime.value = BT*1.5; fb.gain.value = 0.6; pl.pan.value = -0.8; pr.pan.value = 0.8; lp.frequency.value = 2200;
-  Mu.echo.connect(Mu.bus); Mu.echo.connect(dl); dl.connect(pr); pr.connect(Mu.bus); dl.connect(lp); lp.connect(dr); dr.connect(pl); pl.connect(Mu.bus); dr.connect(fb); fb.connect(dl);
+  dl.delayTime.value = BT*0.75; dr.delayTime.value = BT*0.75; fb.gain.value = 0.42; pl.pan.value = -0.8; pr.pan.value = 0.8; lp.frequency.value = 2600;
+  Mu.echo.connect(dl); dl.connect(pr); pr.connect(Mu.riv); dl.connect(lp); lp.connect(dr); dr.connect(pl); pl.connect(Mu.riv); dr.connect(fb); fb.connect(dl);
+  const nb = Mu.rum = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random()*2-1;
 }
-function nota(f, t, d, vol, dest, att){
-  const c = Mu.ctx, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f;
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+(att || 0.008)); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
-  o.connect(g); g.connect(dest || Mu.bus); o.start(t); o.stop(t+d+0.05);
+function inv(g, t, vol, d, att){ g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+(att || 0.006)); g.gain.exponentialRampToValueAtTime(0.0001, t+d); }
+function piano(n, t, d, vol, pan, dest){ // piano elettrico: una sinusoide "colorata" da un'altra
+  const c = Mu.ctx, f = hzN(n), o = c.createOscillator(), m = c.createOscillator(), mg = c.createGain(), g = c.createGain(), p = c.createStereoPanner();
+  o.frequency.value = f; m.frequency.value = f; mg.gain.setValueAtTime(f*1.3, t); mg.gain.exponentialRampToValueAtTime(f*0.05, t+0.5);
+  m.connect(mg); mg.connect(o.frequency); inv(g, t, vol, d); p.pan.value = pan || 0;
+  o.connect(g); g.connect(p); p.connect(dest || Mu.riv); o.start(t); m.start(t); o.stop(t+d+0.05); m.stop(t+d+0.05);
 }
-const carillon = (n, t, vol, dest) => { nota(hzN(n), t, 2.2, vol, dest); nota(hzN(n)*4, t, 0.25, vol*0.25, dest); };
-function motivo(t){ [[0,76,1.2],[0.75,73,1.2],[1.5,81,2.4]].forEach(m => carillon(m[1]+12, t+m[0]*BT, 0.16, Mu.echo)); }
+function basso(n, t, d, vol){
+  const c = Mu.ctx, f = hzN(n), o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter();
+  o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f*2; lp.frequency.value = 420; const g2 = c.createGain(); g2.gain.value = 0.3;
+  inv(g, t, vol, d, 0.008); o.connect(g); o2.connect(g2); g2.connect(g); g.connect(lp); lp.connect(Mu.bus); o.start(t); o2.start(t); o.stop(t+d+0.05); o2.stop(t+d+0.05);
+}
+function cassa(t, vol){
+  const c = Mu.ctx, o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(116, t); o.frequency.exponentialRampToValueAtTime(46, t+0.09);
+  inv(g, t, vol, 0.3, 0.003); o.connect(g); g.connect(Mu.bus); o.start(t); o.stop(t+0.35);
+}
+function fruscio(t, d, vol, tipo, freq, pan, dest){
+  const c = Mu.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), p = c.createStereoPanner();
+  s.buffer = Mu.rum; f.type = tipo; f.frequency.value = freq; f.Q.value = 0.9; p.pan.value = pan || 0;
+  s.connect(f); f.connect(g); g.connect(p); p.connect(dest || Mu.bus); s.start(t, Math.random()*0.5, d+0.05); return g;
+}
+function mani(t, vol){ // battimani: tre colpetti ravvicinati e una coda
+  const g = fruscio(t, 0.25, vol, 'bandpass', 1500, -0.1, Mu.riv);
+  g.gain.setValueAtTime(0.0001, t);
+  [0, 0.011, 0.022].forEach(o => { g.gain.setValueAtTime(vol, t+o); g.gain.exponentialRampToValueAtTime(vol*0.2, t+o+0.009); });
+  g.gain.setValueAtTime(vol, t+0.032); g.gain.exponentialRampToValueAtTime(0.0001, t+0.24);
+}
+function piatto(t, vol, d, pan){ const g = fruscio(t, d, vol, 'highpass', 7000, pan); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t+d); }
+function tappeto(ch, t, d, vol){
+  const c = Mu.ctx, g = c.createGain(), lp = c.createBiquadFilter(); lp.frequency.value = 1300;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.9); g.gain.setValueAtTime(vol, t+d-1); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
+  ch.forEach(n => [-6, 6].forEach(det => { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hzN(n); o.detune.value = det; o.connect(lp); o.start(t); o.stop(t+d+0.05); }));
+  lp.connect(g); g.connect(Mu.riv);
+}
+function voce(n, t, d, vol, eco){ // la voce che canta il motivo
+  const c = Mu.ctx, g = c.createGain(), e = c.createGain(); e.gain.value = eco; inv(g, t, vol, d, 0.012);
+  [[1, 1], [2, 0.25]].forEach(a => { const o = c.createOscillator(), og = c.createGain(); o.frequency.value = hzN(n)*a[0]; og.gain.value = a[1]; o.connect(og); og.connect(g); o.start(t); o.stop(t+d+0.05); });
+  g.connect(Mu.riv); g.connect(e); e.connect(Mu.echo);
+}
+const FR = {1:[[0,76,3],[3,73,3],[6,69,6]], 2:[[0,76,3],[3,73,3],[6,71,6]], 3:[[0,78,3],[3,76,3],[6,73,4],[10,69,6]], 4:[[2,69,2],[4,73,2],[6,76,8]]};
+function frase(k, t, vol, eco){ FR[k].forEach(m => voce(m[1], t+m[0]*S16, m[2]*S16*1.6, vol, eco)); }
+function motivo(t){ frase(1, t, 0.17, 1); }
+// giro di 24 battute: 4 sospese (solo accordi ed eco), 20 col ritmo
+const CANTO = {0:[1,1], 2:[2,1], 8:[1,.5], 10:[3,.5], 12:[3,.5], 13:[1,.5], 14:[4,.5], 15:[2,.8], 16:[3,.5], 17:[1,.5], 18:[4,.5], 19:[2,.8], 20:[3,.5], 21:[1,.5], 22:[4,.5], 23:[2,1]};
 function battuta(b, t){
-  const [root, ch] = PROGM[b % 8];
-  ch.forEach(n => nota(hzN(n-12), t, BT*4.6, 0.045, null, 1.0));           // tappeto
-  nota(hzN(root-12), t, BT*3.8, 0.16, null, 0.05);                          // basso morbido
-  const alt = [ch[0],ch[2],ch[1],ch[3],ch[0]+12,ch[3],ch[1]+12,ch[2]];      // note che dondolano
-  alt.forEach((n, k) => carillon(n, t+k*BT/2, k % 2 ? 0.05 : 0.075, k % 4 === 0 ? Mu.echo : null));
-  if (b % 4 === 2) motivo(t);
+  const k = b % 24, ch = CHM[b % 4], root = RTM[b % 4], ritmo = k >= 4;
+  if (ritmo){
+    [0,3,6,10,13].forEach(p => ch.forEach((n, j) => piano(n, t+p*S16, 0.5, 0.085, -0.35+0.23*j)));
+    [[0,2,0],[3,1,12],[6,2,0],[8,1,7],[10,2,12],[14,2,10]].forEach(x => { if (!(k < 8 && (x[0] === 8 || x[0] === 14))) basso(root+x[2], t+x[0]*S16, x[1]*S16*0.95, 0.3); });
+    for (let q = 0; q < 4; q++){ cassa(t+q*BT, 0.42); piatto(t+q*BT+BT/2, 0.05, 0.09, 0.25); }
+    mani(t+BT, 0.14); mani(t+3*BT, 0.14);
+    for (let p = 0; p < 16; p++) piatto(t+p*S16+(p % 2 ? 0.012 : 0), p % 4 === 2 ? 0.022 : 0.014, 0.03, -0.3);
+    if (k >= 12) tappeto(ch.slice(1).map(n => n+12), t, BT*4+1.2, 0.02);
+  } else {
+    ch.forEach((n, j) => piano(n, t+j*0.018, BT*4, 0.11, -0.4+0.26*j));
+    tappeto(ch.slice(1).map(n => n+12).concat(ch[0]), t, BT*4+1.2, 0.035);
+    if (b >= 4) basso(root, t, BT*3.6, 0.14);
+    if (k >= 2) for (let q = 0; q < 4; q++) piatto(t+q*BT+BT/2, 0.035, 0.09, 0.25);
+  }
+  if (CANTO[k]) frase(CANTO[k][0], t, ritmo ? 0.13 : 0.17, CANTO[k][1]);
 }
 function muTick(){ while (Mu.next < Mu.ctx.currentTime + 0.6){ battuta(Mu.bar++, Mu.next); Mu.next += 4*BT; } }
 const btnMu = document.getElementById('musica');
 btnMu.onclick = () => {
   if (!Mu.ctx) muInit();
   Mu.on = !Mu.on; btnMu.classList.toggle('on', Mu.on); btnMu.textContent = Mu.on ? '♪ Musica: sì' : '♪ Musica';
-  if (Mu.on){ Mu.ctx.resume(); Mu.out.gain.value = 0.6; Mu.next = Mu.ctx.currentTime + 0.1; Mu.bar = 0; muTick(); Mu.timer = setInterval(muTick, 200); }
+  if (Mu.on){ Mu.ctx.resume(); Mu.out.gain.value = 1.15; Mu.next = Mu.ctx.currentTime + 0.1; Mu.bar = 0; muTick(); Mu.timer = setInterval(muTick, 200); }
   else { clearInterval(Mu.timer); Mu.out.gain.value = 0; }
 };
 const suonoTocco = () => { if (Mu.on) motivo(Mu.ctx.currentTime + 0.03); };
