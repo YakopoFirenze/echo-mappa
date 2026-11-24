@@ -52,6 +52,8 @@ aside h2{font:400 26px/1.1 Shrikhand,Georgia,serif;color:var(--violet);margin:6p
 .igwrap,#mini{position:absolute;inset:0 0 36px 0;overflow:hidden}
 .igwrap iframe{width:326px;border:0;transform-origin:0 0;display:block}
 .apri{position:absolute;left:0;right:0;bottom:0;height:36px;display:flex;align-items:center;justify-content:center;background:#141414;color:#fffdf5;font:700 14px Quicksand,sans-serif;text-decoration:none}
+.musica{margin-left:auto;font:700 14px Quicksand,sans-serif;background:#ffd60a;color:#141414;border:3px solid #141414;border-radius:999px;padding:8px 14px;min-height:42px;cursor:pointer;box-shadow:3px 3px 0 #141414}
+.musica.on{background:#141414;color:#ffd60a}
 .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#141414;color:#fffdf5;font:700 13px Quicksand,sans-serif;font-style:normal;margin-right:5px;border:2px solid #fffdf5}
 .ln{display:inline-block;width:26px;height:8px;border-radius:4px;border:2px solid #141414}
 #giorni b{margin-right:4px}
@@ -75,6 +77,7 @@ aside h2{font:400 26px/1.1 Shrikhand,Georgia,serif;color:var(--violet);margin:6p
 <header>
   <h1>ECHO Mappa</h1>
   <p id="sub">Gli eventi d'arte della settimana</p>
+  <button id="musica" class="musica" type="button">♪ Musica</button>
 </header>
 <div class="wrap">
   <section class="mapbox">
@@ -194,6 +197,7 @@ function render(){
 }
 let miniMap = null, miniPin = null;
 function apri(e){ // due mini schermate: il post Instagram e la mappa vera ingrandita
+  suonoTocco();
   setTimeout(() => map.closePopup(), 0);
   const ig = document.getElementById('pIG'), os = document.getElementById('pOSM'); ig.hidden = os.hidden = false;
   const id = (dati.post.match(/\/p\/([^\/]+)/) || [])[1];
@@ -227,6 +231,42 @@ vFi.onclick = () => { map.fitBounds(FIRENZE); vFi.classList.add('on'); vTo.class
 vTo.onclick = () => { map.fitBounds(L.latLngBounds(dati.eventi.map(e=>[e.lat,e.lon])).pad(0.15)); vTo.classList.add('on'); vFi.classList.remove('on'); badge(false); };
 fuori.onclick = () => vTo.onclick();
 
+// --- musica generata dal vivo nel browser (nessun file audio): stesso giro di accordi e motivo "E-CHO" con eco ---
+const Mu = {ctx:null, on:false, next:0, bar:0, timer:null};
+const BPMM = 106, BT = 60/BPMM, hzN = n => 440*Math.pow(2,(n-69)/12);
+const PROGM = [[45,[64,68,71,73]],[49,[64,68,71,73]],[50,[66,69,73,76]],[52,[66,68,71,73]],[54,[64,68,69,73]],[50,[64,69,73,78]],[47,[62,66,69,73]],[52,[62,64,68,71]]];
+function muInit(){
+  const c = Mu.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  Mu.out = c.createGain(); Mu.out.gain.value = 0.55; Mu.out.connect(c.destination);
+  Mu.echo = c.createGain(); // eco che rimbalza sinistra/destra
+  const dl = c.createDelay(2), dr = c.createDelay(2), fb = c.createGain(), pl = c.createStereoPanner(), pr = c.createStereoPanner(), lp = c.createBiquadFilter();
+  dl.delayTime.value = BT*1.5; dr.delayTime.value = BT*1.5; fb.gain.value = 0.55; pl.pan.value = -0.8; pr.pan.value = 0.8; lp.frequency.value = 2600;
+  Mu.echo.connect(Mu.out); Mu.echo.connect(dl); dl.connect(pr); pr.connect(Mu.out); dl.connect(lp); lp.connect(dr); dr.connect(pl); pl.connect(Mu.out); dr.connect(fb); fb.connect(dl);
+}
+function nota(f, t, d, tipo, vol, dest, cut){
+  const c = Mu.ctx, o = c.createOscillator(), g = c.createGain(); o.type = tipo; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.012); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
+  let n = o; if (cut){ const fl = c.createBiquadFilter(); fl.frequency.value = cut; o.connect(fl); n = fl; }
+  n.connect(g); g.connect(dest || Mu.out); o.start(t); o.stop(t+d+0.05);
+}
+function motivo(t){ [[0,76,0.7],[0.75,73,0.7],[1.5,81,1.6]].forEach(m => nota(hzN(m[1]), t+m[0]*BT, m[2]*BT, 'triangle', 0.22, Mu.echo)); }
+function battuta(b, t){
+  const [root, ch] = PROGM[b % 8];
+  for (let k = 0; k < 8; k++) nota(hzN(k % 2 ? root : root-12), t+k*BT/2, BT*0.45, 'sawtooth', k % 2 ? 0.10 : 0.16, null, 420);
+  [0,1.5,3].forEach(x => ch.forEach(n => nota(hzN(n-12), t+x*BT, BT*1.3, 'sine', 0.05)));
+  const seq = [ch[0],ch[1],ch[2],ch[3],ch[2],ch[1],ch[3],ch[2]];
+  for (let k = 0; k < 16; k++) nota(hzN(seq[k % 8]+12), t+k*BT/4, BT*0.22, 'square', k % 4 ? 0.012 : 0.022, null, 2400);
+  if (b % 4 === 2) motivo(t);
+}
+function muTick(){ while (Mu.next < Mu.ctx.currentTime + 0.6){ battuta(Mu.bar++, Mu.next); Mu.next += 4*BT; } }
+const btnMu = document.getElementById('musica');
+btnMu.onclick = () => {
+  if (!Mu.ctx) muInit();
+  Mu.on = !Mu.on; btnMu.classList.toggle('on', Mu.on); btnMu.textContent = Mu.on ? '♪ Musica: sì' : '♪ Musica';
+  if (Mu.on){ Mu.ctx.resume(); Mu.out.gain.value = 0.55; Mu.next = Mu.ctx.currentTime + 0.1; Mu.bar = 0; muTick(); Mu.timer = setInterval(muTick, 200); }
+  else { clearInterval(Mu.timer); Mu.out.gain.value = 0; }
+};
+const suonoTocco = () => { if (Mu.on) motivo(Mu.ctx.currentTime + 0.03); };
 fetch('eventi-bozza.json?'+Date.now()).then(r => r.json()).then(d => {
   dati = d;
   document.getElementById('week').textContent = 'Settimana '+d.settimana;
