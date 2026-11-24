@@ -50,7 +50,15 @@ aside h2{font:400 26px/1.1 Shrikhand,Georgia,serif;color:var(--violet);margin:6p
 #pIG{left:10px}#pOSM{right:10px}
 .mini .x{position:absolute;top:5px;right:5px;z-index:900;width:34px;height:34px;border-radius:50%;border:3px solid #141414;background:#ffd60a;font:700 20px/1 Quicksand,sans-serif;cursor:pointer}
 .igwrap,#mini{position:absolute;inset:0 0 36px 0;overflow:hidden}
-.igwrap iframe{width:326px;border:0;transform-origin:0 0;display:block}
+#scheda{display:flex;flex-direction:column;overflow:auto;color:#141414}
+.sk-st{padding:9px 46px 9px 12px;font:700 13px Quicksand,sans-serif;border-bottom:3px solid #141414}
+.sk-b{padding:10px 12px 4px;display:flex;flex-direction:column;gap:5px}
+.sk-l{font:400 21px/1.05 Shrikhand,Georgia,serif;text-transform:uppercase}
+.sk-c{font:600 12px Quicksand,sans-serif;color:#5b4d70}
+.sk-t{font:700 15px/1.2 Quicksand,sans-serif;font-style:italic;text-transform:uppercase;margin-top:4px}
+.sk-p{font:600 13px/1.25 Quicksand,sans-serif}
+.sk-q{font:700 13px/1.25 Quicksand,sans-serif;text-transform:capitalize}
+.sk-e{margin-top:auto;padding:2px 12px 6px;font:400 19px Shrikhand,Georgia,serif;color:#6b3fa3}
 .apri{position:absolute;left:0;right:0;bottom:0;height:36px;display:flex;align-items:center;justify-content:center;background:#141414;color:#fffdf5;font:700 14px Quicksand,sans-serif;text-decoration:none}
 .musica{margin-left:auto;font:700 14px Quicksand,sans-serif;background:#ffd60a;color:#141414;border:3px solid #141414;border-radius:999px;padding:8px 14px;min-height:42px;cursor:pointer;box-shadow:3px 3px 0 #141414}
 .musica.on{background:#141414;color:#ffd60a}
@@ -83,7 +91,7 @@ aside h2{font:400 26px/1.1 Shrikhand,Georgia,serif;color:var(--violet);margin:6p
   <section class="mapbox">
     <div class="views"><button id="vFi" class="on" type="button">Centro</button><button id="vTo" type="button">Toscana</button></div>
     <div style="position:relative"><button id="fuori" class="fuori" type="button" hidden></button>
-    <div id="pIG" class="mini" hidden><button class="x" type="button" aria-label="Chiudi">×</button><div class="igwrap"><iframe title="Post Instagram di ECHO" loading="lazy"></iframe></div><a class="apri" id="igLink" target="_blank" rel="noopener">Apri su Instagram →</a></div>
+    <div id="pIG" class="mini" hidden><button class="x" type="button" aria-label="Chiudi">×</button><div class="igwrap" id="scheda"></div><a class="apri" id="igLink" target="_blank" rel="noopener">Apri su Instagram →</a></div>
     <div id="pOSM" class="mini" hidden><button class="x" type="button" aria-label="Chiudi">×</button><div id="mini"></div><a class="apri" id="goLink" target="_blank" rel="noopener">Portami lì →</a></div>
     <div id="map" role="region" aria-label="Mappa degli eventi"></div></div>
     <div class="legend" id="giorni"></div>
@@ -201,9 +209,8 @@ function apri(e){ // due mini schermate: il post Instagram e la mappa vera ingra
   setTimeout(() => map.closePopup(), 0);
   const ig = document.getElementById('pIG'), os = document.getElementById('pOSM'); ig.hidden = os.hidden = false;
   const id = (dati.post.match(/\/p\/([^\/]+)/) || [])[1];
-  const fr = ig.querySelector('iframe'), wrap = ig.querySelector('.igwrap'), s = wrap.clientWidth/326;
-  fr.style.transform = 'scale('+s+')'; fr.style.height = (wrap.clientHeight/s)+'px';
-  const src = 'https://www.instagram.com/p/'+id+'/embed/'; if (fr.src !== src) fr.src = src;
+  const st = e.s || stato(e, adesso()), gg = new Date(e.data+'T00:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('scheda').innerHTML = '<div class="sk-st" style="background:'+col[st.k]+'">'+esc(st.txt)+'</div><div class="sk-b"><div class="sk-l">'+esc(e.luogo)+'</div><div class="sk-c">'+esc(e.citta)+'</div><div class="sk-t">'+esc(e.titolo)+'</div>'+(e.persone ? '<div class="sk-p">'+esc(e.persone)+'</div>' : '')+'<div class="sk-q">'+esc(e.tipo)+' · '+esc(gg)+(e.inizio ? ' · ore '+esc(e.inizio)+(e.fine ? '–'+esc(e.fine) : '') : '')+'</div></div><div class="sk-e">ECHO</div>';
   document.getElementById('igLink').href = 'https://www.instagram.com/p/'+id+'/?img_index='+(e.slide || 1);
   document.getElementById('goLink').href = gmaps(e);
   if (!miniMap){ miniMap = L.map('mini', {zoomControl:false}); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(miniMap); miniMap.attributionControl.setPrefix(''); }
