@@ -1,0 +1,26 @@
+{
+ "name": "ECHO Mappa",
+ "short_name": "ECHO Mappa",
+ "description": "Gli eventi d'arte della settimana a Firenze e in Toscana",
+ "start_url": "./bozza.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#ffffd9",
+ "theme_color": "#ffffd9",
+ "lang": "it",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}
